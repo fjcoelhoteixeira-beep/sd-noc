@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="pt-PT" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SD NOC ULTIMATE - V8.0 FULL RESTORE</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e40af">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; transition: all 0.2s ease; }
+        body { background-color: #f8fafc; }
+        .tab-active { background: #1e40af; color: white; border-bottom: 4px solid #60a5fa; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tab-inactive { color: #64748b; border-bottom: 4px solid transparent; }
+        .tab-inactive:hover { background: #f1f5f9; color: #1e293b; }
+        .table-container { max-height: 550px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: white; }
+        input, select { border: 1px solid #cbd5e1 !important; border-radius: 6px; padding: 8px 12px; font-size: 13px; width: 100%; background: #ffffff; }
+        input:focus { border-color: #3b82f6 !important; outline: none; ring: 2px ring #3b82f6; }
+        .metric-card { background: #0f172a; border-radius: 16px; padding: 24px; text-align: center; border: 1px solid #1e293b; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        th { background: #f8fafc; position: sticky; top: 0; z-index: 20; padding: 12px; font-size: 10px; text-transform: uppercase; color: #475569; border-bottom: 2px solid #e2e8f0; font-weight: 800; }
+        td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+        .btn-primary { background: #2563eb; color: white; font-weight: 800; text-transform: uppercase; font-size: 11px; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; border: none; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .btn-secondary { background: #059669; color: white; font-weight: 800; text-transform: uppercase; font-size: 11px; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
+        .btn-danger { color: #ef4444; font-weight: bold; cursor: pointer; padding: 4px; }
+        .btn-danger:hover { color: #b91c1c; }
+        .animate-fade { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-full">
+    <div id="app" class="h-full flex flex-col">
+        <header class="bg-slate-900 text-white px-10 py-5 flex justify-between items-center shadow-xl border-b border-blue-900/40">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter text-blue-400">SD NOC <span class="text-white">ULTIMATE v8.0</span></h1>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em]">Full Enterprise Performance Monitoring</p>
+            </div>
+            <div class="flex gap-8 items-center border-l border-slate-700 pl-8">
+                <div class="text-right">
+                    <p id="current-time" class="text-3xl font-mono font-black text-blue-400 leading-none"></p>
+                    <p id="current-date" class="text-[10px] text-slate-400 uppercase tracking-widest mt-1 font-bold"></p>
+                </div>
+            </div>
+        </header>
+
+        <nav class="bg-white border-b flex flex-wrap shadow-md sticky top-0 z-50 px-4">
+            <button onclick="switchTab('inbound')" id="tab-inbound" class="tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><span>📞</span> Inbound</button>
+            <button onclick="switchTab('backoffice')" id="tab-backoffice" class="tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><span>📋</span> Backoffice</button>
+            <button onclick="switchTab('registo')" id="tab-registo" class="tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><span>⏸️</span> Pausas & Camp.</button>
+            <button onclick="switchTab('horas-extra')" id="tab-horas-extra" class="tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><span>⏰</span> Horas Extra</button>
+            <button onclick="switchTab('consulta')" id="tab-consulta" class="tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><span>🔍</span> Consultas</button>
+            <button onclick="switchTab('produtividade')" id="tab-produtividade" class="tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><span>📊</span> Produtividade</button>
+        </nav>
+
+        <main class="flex-1 overflow-auto p-8 space-y-8">
+            <section id="section-inbound" class="tab-content hidden animate-fade">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-blue-700 font-black text-xs uppercase italic mb-6 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></span> Registo de Chamada Inbound
+                    </h2>
+                    <form id="form-inbound" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-4">
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Mês</label><select id="inb-mes"></select></div>
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Data</label><input type="date" id="inb-data" onchange="renderAll()"></div>
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">ID Cliente</label><input type="text" id="inb-id" placeholder="Ex: 12345"></div>
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Contacto</label><input type="text" id="inb-cont" placeholder="9xxxxxxxx"></div>
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Linha</label><input type="text" id="inb-linha"></div>
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">TechSee</label><select id="inb-tsee"><option value="N">Não</option><option value="S">Sim</option></select></div>
+                        <div class="lg:col-span-2"><label class="block text-[10px] font-black uppercase mb-2 text-blue-500">Problema Detectado</label><input type="text" id="inb-prob"></div>
+                        <div class="lg:col-span-1"><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Resolvido</label><select id="inb-res"><option value="N">Não</option><option value="S">Sim</option></select></div>
+                        <button type="submit" class="btn-primary self-end lg:col-span-1 shadow-blue-500/20 shadow-lg">Gravar</button>
+                    </form>
+                </div>
+                <div class="mt-8 table-container">
+                    <table class="w-full text-left">
+                        <thead><tr><th>ID Cliente</th><th>Contacto</th><th>Linha</th><th>TSee</th><th>Problema</th><th>Resolvido</th><th class="text-right">Ação</th></tr></thead>
+                        <tbody id="tbody-inbound-hoje" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-backoffice" class="tab-content hidden animate-fade">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-emerald-200">
+                    <h2 class="text-emerald-700 font-black text-xs uppercase italic mb-6 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-emerald-600 rounded-full"></span> Registo de Backoffice / OS
+                    </h2>
+                    <form id="form-backoffice" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4">
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Data</label><input type="date" id="bo-data" onchange="renderAll()"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Nº OS</label><input type="text" id="bo-os"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">ID Cliente</label><input type="text" id="bo-id"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Contacto</label><input type="text" id="bo-cont"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">CallID</label><input type="text" id="bo-callid"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Tipo OS</label><input type="text" id="bo-tipo"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Atribuição</label><select id="bo-atrib"><option value="SmartA">SmartA</option><option value="Siebel">Siebel</option></select></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2 text-slate-500">Fechada</label><select id="bo-res"><option value="N">Não</option><option value="S">Sim</option></select></div>
+                        <button type="submit" class="btn-secondary self-end shadow-emerald-500/20 shadow-lg">Registar</button>
+                    </form>
+                </div>
+                <div class="mt-8 table-container">
+                    <table class="w-full text-left">
+                        <thead><tr><th>Data</th><th>Nº OS</th><th>ID Cliente</th><th>CallID</th><th>Tipo</th><th>Atrib</th><th>Status</th><th class="text-right">Ação</th></tr></thead>
+                        <tbody id="tbody-backoffice-hoje" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-registo" class="tab-content hidden animate-fade">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-orange-200">
+                    <h2 class="text-orange-700 font-black text-xs uppercase italic mb-6">Controlo de Pausas e Campanhas</h2>
+                    <form id="form-registo" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div><label class="block text-[10px] font-black uppercase mb-2">Data</label><input type="date" id="reg-data"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2">Início</label><input type="time" id="reg-ini"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2">Fim</label><input type="time" id="reg-fim"></div>
+                        <div><label class="block text-[10px] font-black uppercase mb-2">Motivo</label>
+                            <select id="reg-tipo">
+                                <option value="Lunch">Almoço (Desconta)</option>
+                                <option value="Campanhas">Campanhas (Desconta)</option>
+                                <option value="Meeting">Reunião</option>
+                                <option value="Break">Pausa Café</option>
+                                <option value="Formação">Formação</option>
+                                <option value="WC">WC</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="bg-orange-600 text-white font-black rounded-lg h-[42px] text-xs self-end hover:bg-orange-700">Registar</button>
+                    </form>
+                </div>
+                <div class="mt-8 table-container">
+                    <table class="w-full text-left">
+                        <thead><tr><th>Tipo</th><th>Período</th><th>Duração</th><th class="text-right">Ação</th></tr></thead>
+                        <tbody id="tbody-registo" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-horas-extra" class="tab-content hidden animate-fade">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2 bg-white p-8 rounded-2xl shadow border border-slate-200">
+                        <h2 class="text-slate-800 font-black text-xs uppercase italic mb-6 italic">Registo de Horas Extraordinárias</h2>
+                        <form id="form-he" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label class="block text-[10px] font-black uppercase mb-2">Data</label><input type="date" id="he-data"></div>
+                            <div><label class="block text-[10px] font-black uppercase mb-2">Horas</label><input type="number" id="he-qtd" step="0.5"></div>
+                            <div><label class="block text-[10px] font-black uppercase mb-2">Valor/Hora</label><input type="number" id="he-valor" value="8.50"></div>
+                            <div><label class="block text-[10px] font-black uppercase mb-2">Prémio</label><input type="number" id="he-premio" value="0"></div>
+                            <button type="submit" class="col-span-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">Adicionar ao Acumulado</button>
+                        </form>
+                    </div>
+                    <div class="bg-slate-900 text-white p-10 rounded-3xl flex flex-col justify-center items-center shadow-2xl relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 font-black text-6xl">€</div>
+                        <span class="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">Total Ganho Estimado</span>
+                        <div id="he-total-acumulado" class="text-5xl font-black text-orange-400 mt-4 tracking-tighter">0.00€</div>
+                    </div>
+                </div>
+                <div class="mt-8 table-container">
+                    <table class="w-full text-center">
+                        <thead><tr><th>Data</th><th>Quantidade</th><th>Prémio</th><th>Subtotal</th><th class="text-right">Ação</th></tr></thead>
+                        <tbody id="tbody-he" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-consulta" class="tab-content hidden animate-fade">
+                <div class="bg-slate-900 p-8 rounded-2xl flex gap-6 items-end shadow-2xl">
+                    <div class="w-72"><label class="block text-white text-[10px] font-black uppercase mb-3 tracking-widest opacity-70 italic">Pesquisar Dia Específico</label><input type="date" id="filtro-data" class="h-12 bg-slate-800 border-slate-700 text-white"></div>
+                    <button onclick="renderConsultas()" class="bg-blue-600 hover:bg-blue-500 text-white px-12 h-12 rounded-xl font-black text-xs uppercase shadow-lg shadow-blue-500/40">Visualizar Registos</button>
+                </div>
+                <div class="mt-10 space-y-10">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="text-blue-600 font-black text-xs uppercase mb-4 flex items-center gap-2 border-b pb-4">📂 Inbound Histórico</h4>
+                        <div class="table-container"><table class="w-full text-[10px]"><thead><tr><th>Data</th><th>ID Cli</th><th>Cont.</th><th>Linha</th><th>TSee</th><th>Problema</th><th>Res</th></tr></thead><tbody id="tbody-cons-inb"></tbody></table></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="text-emerald-600 font-black text-xs uppercase mb-4 flex items-center gap-2 border-b pb-4">📂 Backoffice Histórico</h4>
+                        <div class="table-container"><table class="w-full text-[10px]"><thead><tr><th>Data</th><th>OS</th><th>ID Cli</th><th>CallID</th><th>Tipo</th><th>Atrib</th><th>Res</th></tr></thead><tbody id="tbody-cons-bo"></tbody></table></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-produtividade" class="tab-content hidden space-y-8 animate-fade">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-blue-100 flex flex-wrap gap-6 items-end">
+                    <div class="w-56"><label class="block text-[10px] font-black uppercase text-slate-500 mb-2 italic">Data para Cálculo</label><input type="date" id="prod-filtro-data" onchange="updateCharts()" class="h-12"></div>
+                    <div class="w-28"><label class="block text-[10px] font-black uppercase text-slate-500 mb-2 italic">H. Turno</label><input type="number" id="prod-horas-turno" value="8" step="0.5" class="h-12"></div>
+                    <button onclick="calcularProdutividade()" class="bg-blue-600 text-white h-12 px-10 rounded-xl font-black uppercase text-xs shadow-xl shadow-blue-500/20 active:scale-95">⚡ Calcular Performance Diária</button>
+                    
+                    <div class="flex-1 flex justify-end gap-4 border-l pl-8">
+                        <div class="w-56"><label class="block text-[10px] font-black uppercase text-slate-400 mb-2">Mês Consolidado</label><select id="prod-mes-total" class="h-12 font-black text-blue-900" onchange="renderMensal()"></select></div>
+                        <button onclick="exportarExcelFormatado()" class="bg-emerald-600 text-white h-12 px-8 rounded-xl font-black uppercase text-xs flex items-center gap-2 shadow-emerald-500/20 shadow-xl">📊 Exportar Report PRO</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="metric-card border-b-8 border-blue-500"><span class="block text-[10px] font-black uppercase text-blue-400 mb-3 italic tracking-widest">Inbound Mês</span><span id="mes-total-inb" class="text-4xl font-black text-white">0</span></div>
+                    <div class="metric-card border-b-8 border-orange-500"><span class="block text-[10px] font-black uppercase text-orange-400 mb-3 italic tracking-widest">Puxadas Mês</span><span id="mes-total-bo-pux" class="text-4xl font-black text-white">0</span></div>
+                    <div class="metric-card border-b-8 border-emerald-500"><span class="block text-[10px] font-black uppercase text-emerald-400 mb-3 italic tracking-widest">Fechadas Mês</span><span id="mes-total-bo-res" class="text-4xl font-black text-white">0</span></div>
+                    <div class="metric-card border-b-8 border-slate-500"><span class="block text-[10px] font-black uppercase text-slate-400 mb-3 italic tracking-widest">H. Efetivas</span><span id="mes-total-horas" class="text-4xl font-black text-white">0h</span></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-10 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
+                        <h3 class="text-[12px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8 border-b pb-4 w-full text-center italic">Inbound (Meta: 4.125 / Hora)</h3>
+                        <div class="w-56 h-56"><canvas id="chartInbound"></canvas></div>
+                        <p id="txt-inbound-dia" class="text-lg mt-6 font-black text-blue-600"></p>
+                    </div>
+                    <div class="bg-white p-10 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
+                        <h3 class="text-[12px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8 border-b pb-4 w-full text-center italic">Backoffice (Metas: 5 Pux | 2 Fech)</h3>
+                        <div class="w-56 h-56"><canvas id="chartBackoffice"></canvas></div>
+                        <div id="txt-bo-dia" class="mt-6 flex gap-6"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-[11px] text-center">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="p-5">Data Calendário</th>
+                                <th class="text-blue-600">Inbound (Real/Meta)</th>
+                                <th class="text-orange-600">Puxadas (Real/Meta)</th>
+                                <th class="text-emerald-600">Fechos (Real/Meta)</th>
+                                <th>Tempo Efetivo</th>
+                                <th>Remover</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-prod-hist" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let db = {
+            inbound: JSON.parse(localStorage.getItem('sd_inb_v80')) || [],
+            backoffice: JSON.parse(localStorage.getItem('sd_bo_v80')) || [],
+            registo: JSON.parse(localStorage.getItem('sd_reg_v80')) || [],
+            hist: JSON.parse(localStorage.getItem('sd_hist_v80')) || [],
+            he: JSON.parse(localStorage.getItem('sd_he_v80')) || []
+        };
+        const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        let chartInb = null, chartBO = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const h = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('input[type="date"]').forEach(el => el.value = h);
+            document.querySelectorAll('#inb-mes, #prod-mes-total').forEach(el => {
+                el.innerHTML = MESES.map(m => `<option value="${m}">${m}</option>`).join('');
+            });
+            document.getElementById('prod-mes-total').value = MESES[new Date().getMonth()];
+            setInterval(updateClock, 1000); updateClock(); initCharts(); switchTab('inbound'); renderAll();
+        });
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${t}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-6 py-5 text-[11px] font-black uppercase tracking-widest tab-inactive');
+            document.getElementById(`tab-${t}`).classList.add('tab-active');
+            if(t === 'produtividade') { updateCharts(); renderMensal(); }
+        }
+
+        function updateClock() {
+            const n = new Date();
+            document.getElementById('current-time').innerText = n.toLocaleTimeString('pt-PT');
+            document.getElementById('current-date').innerText = n.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        function save(t) { localStorage.setItem('sd_' + t + '_v80', JSON.stringify(db[t])); renderAll(); }
+
+        document.getElementById('form-inbound').addEventListener('submit', (e) => {
+            e.preventDefault();
+            db.inbound.push({
+                id: Date.now(),
+                mes: document.getElementById('inb-mes').value,
+                data: document.getElementById('inb-data').value,
+                idCli: document.getElementById('inb-id').value,
+                cont: document.getElementById('inb-cont').value,
+                linha: document.getElementById('inb-linha').value,
+                tsee: document.getElementById('inb-tsee').value,
+                prob: document.getElementById('inb-prob').value,
+                res: document.getElementById('inb-res').value
+            });
+            save('inbound'); 
+            document.getElementById('inb-id').value = ''; 
+            document.getElementById('inb-cont').value = '';
+            document.getElementById('inb-linha').value = '';
+            document.getElementById('inb-prob').value = '';
+        });
+
+        document.getElementById('form-backoffice').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const d = document.getElementById('bo-data').value;
+            db.backoffice.push({
+                id: Date.now(), mes: MESES[new Date(d).getMonth()], data: d,
+                os: document.getElementById('bo-os').value,
+                idCli: document.getElementById('bo-id').value,
+                cont: document.getElementById('bo-cont').value,
+                callid: document.getElementById('bo-callid').value,
+                tipo: document.getElementById('bo-tipo').value,
+                atrib: document.getElementById('bo-atrib').value,
+                res: document.getElementById('bo-res').value
+            });
+            save('backoffice'); 
+            document.getElementById('bo-os').value = ''; document.getElementById('bo-id').value = '';
+            document.getElementById('bo-cont').value = ''; document.getElementById('bo-callid').value = '';
+            document.getElementById('bo-tipo').value = '';
+        });
+
+        document.getElementById('form-registo').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const i = document.getElementById('reg-ini').value, f = document.getElementById('reg-fim').value;
+            const dur = (new Date(`2000-01-01T${f}`) - new Date(`2000-01-01T${i}`)) / 60000;
+            db.registo.push({ id: Date.now(), data: document.getElementById('reg-data').value, ini: i, fim: f, dur, tipo: document.getElementById('reg-tipo').value });
+            save('registo');
+        });
+
+        document.getElementById('form-he').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const q = parseFloat(document.getElementById('he-qtd').value) || 0;
+            const v = parseFloat(document.getElementById('he-valor').value) || 0;
+            const p = parseFloat(document.getElementById('he-premio').value) || 0;
+            db.he.push({ id: Date.now(), data: document.getElementById('he-data').value, qtd: q, val: v, premio: p, total: (q * v) + p });
+            save('he');
+        });
+
+        function calcularProdutividade() {
+            const d = document.getElementById('prod-filtro-data').value;
+            const hT = parseFloat(document.getElementById('prod-horas-turno').value) || 8;
+            const inbR = db.inbound.filter(r => r.data === d).length;
+            const boP = db.backoffice.filter(r => r.data === d).length;
+            const boF = db.backoffice.filter(r => r.data === d && r.res === 'S').length;
+            const desc = db.registo.filter(r => r.data === d && (r.tipo === 'Lunch' || r.tipo === 'Campanhas')).reduce((a,b) => a+b.dur, 0);
+            const hEfe = Math.max(0, hT - (desc/60));
+            db.hist = db.hist.filter(x => x.data !== d);
+            db.hist.unshift({
+                id: Date.now(), data: d, mes: MESES[new Date(d).getMonth()],
+                inb: inbR, mInb: (hEfe*4.125).toFixed(1),
+                boP: boP, mBoP: (hEfe*5).toFixed(0),
+                boF: boF, mBoF: (hEfe*2).toFixed(0),
+                hEfe: hEfe.toFixed(2)
+            });
+            save('hist'); updateCharts(); renderMensal();
+        }
+
+        function initCharts() {
+            const cfg = { type: 'doughnut', options: { cutout: '80%', plugins: { legend: { display: false } }, responsive: true } };
+            chartInb = new Chart(document.getElementById('chartInbound').getContext('2d'), { ...cfg, data: { datasets: [{ data: [0, 100], backgroundColor: ['#3b82f6', '#f1f5f9'] }] } });
+            chartBO = new Chart(document.getElementById('chartBackoffice').getContext('2d'), { ...cfg, data: { datasets: [{ data: [0, 100], backgroundColor: ['#10b981', '#f1f5f9'] }] } });
+        }
+
+        function updateCharts() {
+            const d = document.getElementById('prod-filtro-data').value;
+            const c = db.hist.find(x => x.data === d);
+            if(c) {
+                chartInb.data.datasets[0].data = [c.inb, Math.max(0, c.mInb - c.inb)];
+                chartBO.data.datasets[0].data = [c.boP, Math.max(0, c.mBoP - c.boP)];
+                document.getElementById('txt-inbound-dia').innerText = `${c.inb} / ${c.mInb} Chamadas`;
+                document.getElementById('txt-bo-dia').innerHTML = `
+                    <div class="bg-orange-50 px-4 py-2 rounded-lg border border-orange-100 text-center"><span class="block text-[9px] font-black text-orange-600 uppercase">Puxadas</span><span class="font-black text-slate-800">${c.boP}/${c.mBoP}</span></div>
+                    <div class="bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 text-center"><span class="block text-[9px] font-black text-emerald-600 uppercase">Fechos</span><span class="font-black text-slate-800">${c.boF}/${c.mBoF}</span></div>
+                `;
+            }
+            chartInb.update(); chartBO.update();
+        }
+
+        function renderAll() {
+            const di = document.getElementById('inb-data').value, db_ = document.getElementById('bo-data').value, dr = document.getElementById('reg-data').value;
+            document.getElementById('tbody-inbound-hoje').innerHTML = db.inbound.filter(r => r.data === di).reverse().map(r => `<tr><td>${r.idCli}</td><td>${r.cont}</td><td>${r.linha}</td><td>${r.tsee}</td><td>${r.prob}</td><td class="font-bold">${r.res}</td><td class="text-right"><button onclick="deleteItem('inbound', ${r.id})" class="btn-danger">🗑️</button></td></tr>`).join('');
+            document.getElementById('tbody-backoffice-hoje').innerHTML = db.backoffice.filter(r => r.data === db_).reverse().map(r => `<tr><td>${r.data}</td><td class="font-black text-blue-600">${r.os}</td><td>${r.idCli}</td><td>${r.callid}</td><td>${r.tipo}</td><td>${r.atrib}</td><td class="font-bold text-emerald-600">${r.res}</td><td class="text-right"><button onclick="deleteItem('backoffice', ${r.id})" class="btn-danger">🗑️</button></td></tr>`).join('');
+            document.getElementById('tbody-registo').innerHTML = db.registo.filter(r => r.data === dr).map(r => `<tr><td class="font-black text-orange-600">${r.tipo}</td><td>${r.ini} - ${r.fim}</td><td class="font-bold">${r.dur} min</td><td class="text-right"><button onclick="deleteItem('registo', ${r.id})" class="btn-danger">🗑️</button></td></tr>`).join('');
+            document.getElementById('tbody-he').innerHTML = db.he.map(h => `<tr><td>${h.data}</td><td class="font-black">${h.qtd}h</td><td>${h.premio.toFixed(2)}€</td><td class="font-black text-emerald-600">${h.total.toFixed(2)}€</td><td class="text-right"><button onclick="deleteItem('he', ${h.id})" class="btn-danger">🗑️</button></td></tr>`).join('');
+            document.getElementById('he-total-acumulado').innerText = db.he.reduce((a,b) => a+b.total, 0).toFixed(2) + "€";
+            document.getElementById('tbody-prod-hist').innerHTML = db.hist.map(h => `<tr><td class="p-4 font-black text-slate-700">${h.data}</td><td>${h.inb}/${h.mInb}</td><td>${h.boP}/${h.mBoP}</td><td>${h.boF}/${h.mBoF}</td><td>${h.hEfe}h</td><td><button onclick="deleteItem('hist', ${h.id})" class="btn-danger">🗑️</button></td></tr>`).join('');
+        }
+
+        function deleteItem(t, id) { if(confirm("Apagar?")) { db[t] = db[t].filter(x => x.id !== id); save(t); } }
+
+        function renderMensal() {
+            const m = document.getElementById('prod-mes-total').value;
+            document.getElementById('mes-total-inb').innerText = db.inbound.filter(r => r.mes === m).length;
+            document.getElementById('mes-total-bo-pux').innerText = db.backoffice.filter(r => r.mes === m).length;
+            document.getElementById('mes-total-bo-res').innerText = db.backoffice.filter(r => r.mes === m && r.res === 'S').length;
+            document.getElementById('mes-total-horas').innerText = db.hist.filter(r => r.mes === m).reduce((a,b) => a + parseFloat(b.hEfe), 0).toFixed(1) + "h";
+        }
+
+        function renderConsultas() {
+            const d = document.getElementById('filtro-data').value;
+            document.getElementById('tbody-cons-inb').innerHTML = db.inbound.filter(r => r.data === d).map(r => `<tr><td>${r.data}</td><td>${r.idCli}</td><td>${r.cont}</td><td>${r.linha}</td><td>${r.tsee}</td><td>${r.prob}</td><td>${r.res}</td></tr>`).join('');
+            document.getElementById('tbody-cons-bo').innerHTML = db.backoffice.filter(r => r.data === d).map(r => `<tr><td>${r.data}</td><td>${r.os}</td><td>${r.idCli}</td><td>${r.callid}</td><td>${r.tipo}</td><td>${r.atrib}</td><td>${r.res}</td></tr>`).join('');
+        }
+
+        function exportarExcelFormatado() {
+            const mes = document.getElementById('prod-mes-total').value;
+            const wb = XLSX.utils.book_new();
+            const wsInb = XLSX.utils.json_to_sheet(db.inbound.filter(r => r.mes === mes));
+            const wsBo = XLSX.utils.json_to_sheet(db.backoffice.filter(r => r.mes === mes));
+            XLSX.utils.book_append_sheet(wb, wsInb, "Inbound");
+            XLSX.utils.book_append_sheet(wb, wsBo, "Backoffice");
+            XLSX.writeFile(wb, `Report_SDNOC_${mes}.xlsx`);
+        }
+    </script>
+</body>
+</html>
